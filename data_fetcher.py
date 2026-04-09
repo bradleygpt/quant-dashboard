@@ -57,47 +57,58 @@ def get_sp500_tickers() -> list[str]:
 
     # Hardcoded S&P 500 fallback (as of early 2026)
     return sorted([
-        "AAPL","ABBV","ABT","ACN","ADBE","ADI","ADM","ADP","ADSK","AEE","AEP","AES",
-        "AFL","AIG","AIZ","AJG","AKAM","ALB","ALGN","ALK","ALL","ALLE","AMAT","AMCR",
-        "AMD","AME","AMGN","AMP","AMT","AMZN","ANET","ANSS","AON","AOS","APA","APD",
-        "APH","APTV","ARE","ATO","ATVI","AVB","AVGO","AVY","AWK","AXP","AZO","BA",
-        "BAC","BAX","BBWI","BBY","BDX","BEN","BF-B","BG","BIIB","BIO","BK","BKNG",
-        "BKR","BLK","BMY","BR","BRK-B","BRO","BSX","BWA","BXP","C","CAG","CAH",
-        "CARR","CAT","CB","CBOE","CBRE","CCI","CCL","CDAY","CDNS","CDW","CE","CEG",
-        "CF","CFG","CHD","CHRW","CHTR","CI","CINF","CL","CLX","CMA","CMCSA","CME",
-        "CMG","CMI","CMS","CNC","CNP","COF","COO","COP","COST","CPB","CPRT","CPT",
-        "CRL","CRM","CSCO","CSGP","CSX","CTAS","CTLT","CTRA","CTSH","CTVA","CVS",
-        "CVX","CZR","D","DAL","DD","DE","DFS","DG","DGX","DHI","DHR","DIS",
-        "DISH","DLR","DLTR","DOV","DOW","DPZ","DRI","DTE","DUK","DVA","DVN","DXC",
-        "DXCM","EA","EBAY","ECL","ED","EFX","EIX","EL","EMN","EMR","ENPH","EOG",
-        "EPAM","EQIX","EQR","EQT","ES","ESS","ETN","ETR","ETSY","EVRG","EW","EXC",
-        "EXPD","EXPE","EXR","F","FANG","FAST","FBHS","FCX","FDS","FDX","FE","FFIV",
-        "FIS","FISV","FITB","FLT","FMC","FOX","FOXA","FRC","FRT","FTNT","FTV","GD",
-        "GE","GEHC","GEN","GILD","GIS","GL","GLW","GM","GNRC","GOOG","GOOGL","GPC",
-        "GPN","GRMN","GS","GWW","HAL","HAS","HBAN","HCA","HSIC","HST","HSY","HUM",
-        "HWM","IBM","ICE","IDXX","IEX","IFF","ILMN","INCY","INTC","INTU","INVH","IP",
-        "IPG","IQV","IR","IRM","ISRG","IT","ITW","IVZ","J","JBHT","JCI","JKHY",
-        "JNJ","JNPR","JPM","K","KDP","KEY","KEYS","KHC","KIM","KLAC","KMB","KMI",
-        "KMX","KO","KR","L","LDOS","LEN","LH","LHX","LIN","LKQ","LLY","LMT",
-        "LNC","LNT","LOW","LRCX","LULU","LUV","LVS","LW","LYB","LYV","MA","MAA",
-        "MAR","MAS","MCD","MCHP","MCK","MCO","MDLZ","MDT","MET","META","MGM","MHK",
-        "MKC","MKTX","MLM","MMC","MMM","MNST","MO","MOH","MOS","MPC","MPWR","MRK",
-        "MRNA","MRO","MS","MSCI","MSFT","MSI","MTB","MTCH","MTD","MU","NCLH","NDAQ",
-        "NDSN","NEE","NEM","NFLX","NI","NKE","NOC","NOW","NRG","NSC","NTAP","NTRS",
-        "NUE","NVDA","NVR","NWL","NWS","NWSA","NXPI","O","ODFL","OGN","OKE","OMC",
-        "ON","ORCL","ORLY","OTIS","OXY","PARA","PAYC","PAYX","PCAR","PCG","PEAK",
-        "PEG","PEP","PFE","PFG","PG","PGR","PH","PHM","PKG","PKI","PLD","PM",
-        "PNC","PNR","PNW","POOL","PPG","PPL","PRU","PSA","PSX","PTC","PVH","PWR",
-        "PXD","PYPL","QCOM","QRVO","RCL","RE","REG","REGN","RF","RHI","RJF","RL",
-        "RMD","ROK","ROL","ROP","ROST","RSG","RTX","RVTY","SBAC","SBNY","SBUX","SCHW",
-        "SEE","SHW","SIVB","SJM","SLB","SNA","SNPS","SO","SPG","SPGI","SRE","STE",
-        "STLD","STT","STX","STZ","SWK","SWKS","SYF","SYK","SYY","T","TAP","TDG",
-        "TDY","TECH","TEL","TER","TFC","TFX","TGT","TMO","TMUS","TPR","TRGP","TRMB",
-        "TROW","TRV","TSCO","TSLA","TSN","TT","TTWO","TXN","TXT","TYL","UAL","UDR",
-        "UHS","ULTA","UNH","UNP","UPS","URI","USB","V","VFC","VICI","VLO","VMC",
-        "VRSK","VRSN","VRTX","VTR","VTRS","VZ","WAB","WAT","WBA","WBD","WDC","WEC",
-        "WELL","WFC","WHR","WM","WMB","WMT","WRB","WRK","WST","WTW","WY","WYNN",
-        "XEL","XOM","XRAY","XYL","YUM","ZBH","ZBRA","ZION","ZTS",
+        "AAPL", "ABBV", "ABT", "ACN", "ADBE", "ADI", "ADM", "ADP", "ADSK", "AEE",
+        "AEP", "AES", "AFL", "AIG", "AIZ", "AJG", "AKAM", "ALB", "ALGN", "ALK",
+        "ALL", "ALLE", "AMAT", "AMCR", "AMD", "AME", "AMGN", "AMP", "AMT", "AMZN",
+        "ANET", "ANSS", "AON", "AOS", "APA", "APD", "APH", "APTV", "ARE", "ATO",
+        "AVB", "AVGO", "AVY", "AWK", "AXP", "AZO", "BA", "BAC", "BAX", "BBWI",
+        "BBY", "BDX", "BEN", "BF-B", "BG", "BIIB", "BIO", "BK", "BKNG", "BKR",
+        "BLK", "BMY", "BR", "BRK-B", "BRO", "BSX", "BWA", "BXP", "C", "CAG",
+        "CAH", "CARR", "CAT", "CB", "CBOE", "CBRE", "CCI", "CCL", "CDAY", "CDNS",
+        "CDW", "CE", "CEG", "CF", "CFG", "CHD", "CHRW", "CHTR", "CI", "CINF",
+        "CL", "CLX", "CMA", "CMCSA", "CME", "CMG", "CMI", "CMS", "CNC", "CNP",
+        "COF", "COO", "COP", "COST", "CPB", "CPRT", "CPT", "CRL", "CRM", "CSCO",
+        "CSGP", "CSX", "CTAS", "CTLT", "CTRA", "CTSH", "CTVA", "CVS", "CVX", "CZR",
+        "D", "DAL", "DD", "DE", "DFS", "DG", "DGX", "DHI", "DHR", "DIS",
+        "DLR", "DLTR", "DOV", "DOW", "DPZ", "DRI", "DTE", "DUK", "DVA", "DVN",
+        "DXCM", "EA", "EBAY", "ECL", "ED", "EFX", "EIX", "EL", "EMN", "EMR",
+        "ENPH", "EOG", "EPAM", "EQIX", "EQR", "EQT", "ES", "ESS", "ETN", "ETR",
+        "ETSY", "EVRG", "EW", "EXC", "EXPD", "EXPE", "EXR", "F", "FANG", "FAST",
+        "FBHS", "FCX", "FDS", "FDX", "FE", "FFIV", "FIS", "FISV", "FITB", "FLT",
+        "FMC", "FOX", "FOXA", "FRT", "FTNT", "FTV", "GD", "GE", "GEHC", "GEN",
+        "GILD", "GIS", "GL", "GLW", "GM", "GNRC", "GOOG", "GOOGL", "GPC", "GPN",
+        "GRMN", "GS", "GWW", "HAL", "HAS", "HBAN", "HCA", "HSIC", "HST", "HSY",
+        "HUM", "HWM", "IBM", "ICE", "IDXX", "IEX", "IFF", "ILMN", "INCY", "INTC",
+        "INTU", "INVH", "IP", "IPG", "IQV", "IR", "IRM", "ISRG", "IT", "ITW",
+        "IVZ", "J", "JBHT", "JCI", "JKHY", "JNJ", "JNPR", "JPM", "K", "KDP",
+        "KEY", "KEYS", "KHC", "KIM", "KLAC", "KMB", "KMI", "KMX", "KO", "KR",
+        "L", "LDOS", "LEN", "LH", "LHX", "LIN", "LKQ", "LLY", "LMT", "LNC",
+        "LNT", "LOW", "LRCX", "LULU", "LUV", "LVS", "LW", "LYB", "LYV", "MA",
+        "MAA", "MAR", "MAS", "MCD", "MCHP", "MCK", "MCO", "MDLZ", "MDT", "MET",
+        "META", "MGM", "MHK", "MKC", "MKTX", "MLM", "MMC", "MMM", "MNST", "MO",
+        "MOH", "MOS", "MPC", "MPWR", "MRK", "MRNA", "MRO", "MS", "MSCI", "MSFT",
+        "MSI", "MTB", "MTCH", "MTD", "MU", "NCLH", "NDAQ", "NDSN", "NEE", "NEM",
+        "NFLX", "NI", "NKE", "NOC", "NOW", "NRG", "NSC", "NTAP", "NTRS", "NUE",
+        "NVDA", "NVR", "NWL", "NWS", "NWSA", "NXPI", "O", "ODFL", "OGN", "OKE",
+        "OMC", "ON", "ORCL", "ORLY", "OTIS", "OXY", "PARA", "PAYC", "PAYX", "PCAR",
+        "PCG", "PEAK", "PEG", "PEP", "PFE", "PFG", "PG", "PGR", "PH", "PHM",
+        "PKG", "PKI", "PLD", "PM", "PNC", "PNR", "PNW", "POOL", "PPG", "PPL",
+        "PRU", "PSA", "PSX", "PTC", "PVH", "PWR", "PYPL", "QCOM", "QRVO", "RCL",
+        "RE", "REG", "REGN", "RF", "RHI", "RJF", "RL", "RMD", "ROK", "ROL",
+        "ROP", "ROST", "RSG", "RTX", "RVTY", "SBAC", "SBUX", "SCHW", "SEE", "SHW",
+        "SJM", "SLB", "SNA", "SNPS", "SO", "SPG", "SPGI", "SRE", "STE", "STLD",
+        "STT", "STX", "STZ", "SWK", "SWKS", "SYF", "SYK", "SYY", "T", "TAP",
+        "TDG", "TDY", "TECH", "TEL", "TER", "TFC", "TFX", "TGT", "TMO", "TMUS",
+        "TPR", "TRGP", "TRMB", "TROW", "TRV", "TSCO", "TSLA", "TSN", "TT", "TTWO",
+        "TXN", "TXT", "TYL", "UAL", "UDR", "UHS", "ULTA", "UNH", "UNP", "UPS",
+        "URI", "USB", "V", "VFC", "VICI", "VLO", "VMC", "VRSK", "VRSN", "VRTX",
+        "VTR", "VTRS", "VZ", "WAB", "WAT", "WBA", "WBD", "WDC", "WEC", "WELL",
+        "WFC", "WHR", "WM", "WMB", "WMT", "WRB", "WRK", "WST", "WTW", "WY",
+        "WYNN", "XEL", "XOM", "XRAY", "XYL", "YUM", "ZBH", "ZBRA", "ZION", "ZTS",
+        "COIN", "PLTR", "CRWD", "DASH", "DDOG", "SNOW", "NET", "ZS", "MDB",
+        "TTD", "PANW", "ABNB", "RIVN", "HOOD", "RBLX", "ARM", "SMCI", "VST",
+        "DECK", "AXON", "FICO", "GDDY", "HUBB", "TW", "GEV", "VLTO", "KVUE",
+        "SOLV", "SW",
     ])
 
 
@@ -111,7 +122,6 @@ def get_broad_universe(min_market_cap_b: float = 10.0) -> list[str]:
     sp500 = get_sp500_tickers()
 
     # Supplement with common large-cap tickers not always in S&P 500
-    # (recent IPOs, newly eligible, etc.)
     supplemental = _get_supplemental_tickers()
     all_tickers = sorted(set(sp500 + supplemental))
 
@@ -166,7 +176,7 @@ def fetch_ticker_data(ticker: str) -> dict | None:
             "sector": info.get("sector", "Unknown"),
             "industry": info.get("industry", "Unknown"),
             "marketCap": info.get("marketCap", 0),
-            "currentPrice": round(current_price, 2),
+            "currentPrice": round(float(current_price), 2),
             "currency": info.get("currency", "USD"),
             # Valuation
             "forwardPE": info.get("forwardPE"),
@@ -197,29 +207,30 @@ def fetch_ticker_data(ticker: str) -> dict | None:
 
         return data
 
-    except Exception as e:
+    except Exception:
         return None
 
 
 def _calc_momentum(hist: pd.DataFrame, current_price: float) -> dict:
     """Calculate momentum metrics from price history."""
     close = hist["Close"]
+    current_price = float(current_price)
 
     def _pct_return(days: int) -> float | None:
-        if len(close) >= days:
-            past = close.iloc[-(days + 1)]
+        if len(close) >= days + 1:
+            past = float(close.iloc[-(days + 1)])
             if past and past > 0:
                 return round((current_price - past) / past, 4)
         return None
 
-    sma50 = close.rolling(50).mean().iloc[-1] if len(close) >= 50 else None
-    sma200 = close.rolling(200).mean().iloc[-1] if len(close) >= 200 else None
+    sma50 = float(close.rolling(50).mean().iloc[-1]) if len(close) >= 50 else None
+    sma200 = float(close.rolling(200).mean().iloc[-1]) if len(close) >= 200 else None
 
     return {
         "momentum_1m": _pct_return(21),
         "momentum_3m": _pct_return(63),
         "momentum_6m": _pct_return(126),
-        "momentum_12m": _pct_return(252) if len(close) >= 252 else _pct_return(len(close) - 1),
+        "momentum_12m": _pct_return(252) if len(close) >= 253 else _pct_return(len(close) - 2),
         "momentum_vs_sma50": round((current_price - sma50) / sma50, 4) if sma50 and sma50 > 0 else None,
         "momentum_vs_sma200": round((current_price - sma200) / sma200, 4) if sma200 and sma200 > 0 else None,
     }
@@ -243,7 +254,7 @@ def _calc_analyst_metrics(t: yf.Ticker, info: dict) -> dict:
         if calendar is not None and not calendar.empty and "Surprise(%)" in calendar.columns:
             recent = calendar.dropna(subset=["Surprise(%)"])
             if not recent.empty:
-                surprise_pct = recent["Surprise(%)"].iloc[0]
+                surprise_pct = float(recent["Surprise(%)"].iloc[0])
                 if not np.isfinite(surprise_pct):
                     surprise_pct = None
     except Exception:
@@ -283,9 +294,8 @@ def fetch_universe_data(
         except Exception:
             cached = {}
 
-    # Check if cache is fresh enough
-    if _is_cache_fresh(cache_file) and len(cached) > 50:
-        # Filter by market cap and return
+    # Check if cache is fresh enough AND has a reasonable number of entries
+    if _is_cache_fresh(cache_file) and len(cached) > 100:
         return _filter_by_market_cap(cached, min_market_cap_b)
 
     # Fetch fresh data
