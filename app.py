@@ -278,6 +278,12 @@ with st.sidebar:
         st.cache_data.clear()
         st.session_state.scored_df = None
         st.session_state.raw_data = None
+        # Also delete on-disk cache to force full re-fetch
+        import shutil
+        try:
+            shutil.rmtree("data_cache", ignore_errors=True)
+        except Exception:
+            pass
         st.rerun()
 
     st.caption(f"Last refresh: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
