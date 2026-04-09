@@ -1,11 +1,13 @@
 """
 Data fetching and caching layer.
 Pulls ticker universe, fundamentals, price history, and analyst data from yfinance.
+Uses concurrent threading to speed up bulk fetches.
 """
 
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -118,65 +120,117 @@ def get_broad_universe(min_market_cap_b: float = 10.0) -> list[str]:
     Get a broad US equity universe filtered by market cap.
     Uses S&P 500 as base, then extends with common large/mid-cap tickers.
     """
-    # Start with S&P 500 as the core
     sp500 = get_sp500_tickers()
-
-    # Supplement with common large-cap tickers not always in S&P 500
     supplemental = _get_supplemental_tickers()
     all_tickers = sorted(set(sp500 + supplemental))
-
     return all_tickers
 
 
 def _get_supplemental_tickers() -> list[str]:
     """Additional large/mid-cap tickers that may not be in S&P 500."""
     return [
-        # Large tech / recent additions
         "PLTR", "COIN", "HOOD", "RBLX", "SNOW", "NET", "CRWD", "DDOG",
         "ZS", "MDB", "BILL", "TTD", "PINS", "SNAP", "U", "PATH",
         "RIVN", "LCID", "JOBY", "GRAB", "SE", "MELI", "NU",
-        # Large international ADRs
         "TSM", "BABA", "JD", "PDD", "BIDU", "NIO", "LI", "XPEV",
         "SHOP", "TD", "RY", "CNQ", "SU", "BN", "BAM",
-        # Other large caps
         "BX", "KKR", "APO", "ARES", "OWL",
         "SPOT", "SQ", "MSTR", "CELH", "DUOL", "CAVA",
     ]
 
 
-# ── Fundamental Data Fetching ──────────────────────────────────────
+# ── Batch Price Download ───────────────────────────────────────────
 
 
-def fetch_ticker_data(ticker: str) -> dict | None:
-    """Fetch all fundamental and price data for a single ticker."""
+def _batch_download_prices(tickers: list[str]) -> dict[str, pd.DataFrame]:
+    """
+    Download 1 year of price history for all tickers in one batch call.
+    This is MUCH faster than individual calls (one HTTP request vs hundreds).
+    """
+    try:
+        # yfinance batch download - single request for all tickers
+        data = yf.download(
+            tickers=tickers,
+            period="1y",
+            group_by="ticker",
+            auto_adjust=True,
+            threads=True,
+            progress=False,
+        )
+
+        result = {}
+        if len(tickers) == 1:
+            # Single ticker returns flat DataFrame
+            ticker = tickers[0]
+            if not data.empty and len(data) >= 20:
+                result[ticker] = data
+        else:
+            # Multi-ticker returns MultiIndex columns
+            for ticker in tickers:
+                try:
+                    ticker_data = data[ticker].dropna(how="all")
+                    if not ticker_data.empty and len(ticker_data) >= 20:
+                        result[ticker] = ticker_data
+                except (KeyError, TypeError):
+                    continue
+
+        return result
+    except Exception:
+        return {}
+
+
+# ── Fundamental Data Fetching (single ticker) ──────────────────────
+
+
+def _fetch_info_only(ticker: str) -> dict | None:
+    """Fetch only the .info dict for a single ticker. Used in threaded calls."""
     try:
         t = yf.Ticker(ticker)
         info = t.info or {}
-
         if not info.get("marketCap"):
             return None
 
-        # Price history for momentum calculations
-        hist = t.history(period="1y")
-        if hist.empty or len(hist) < 20:
+        # Also try to get earnings surprise
+        surprise_pct = None
+        try:
+            calendar = t.earnings_dates
+            if calendar is not None and not calendar.empty and "Surprise(%)" in calendar.columns:
+                recent = calendar.dropna(subset=["Surprise(%)"])
+                if not recent.empty:
+                    surprise_pct = float(recent["Surprise(%)"].iloc[0])
+                    if not np.isfinite(surprise_pct):
+                        surprise_pct = None
+        except Exception:
+            pass
+
+        info["_earnings_surprise_pct"] = surprise_pct
+        return info
+    except Exception:
+        return None
+
+
+def _build_ticker_data(ticker: str, info: dict, price_hist: pd.DataFrame) -> dict | None:
+    """Combine info and price history into a single data dict."""
+    try:
+        if price_hist is None or price_hist.empty or len(price_hist) < 20:
             return None
 
-        current_price = hist["Close"].iloc[-1]
+        close = price_hist["Close"]
+        current_price = float(close.iloc[-1])
 
         # Momentum calculations
-        momentum = _calc_momentum(hist, current_price)
+        momentum = _calc_momentum(close, current_price)
 
-        # Analyst / EPS revision proxies
-        analyst_data = _calc_analyst_metrics(t, info)
+        # Analyst metrics
+        analyst_data = _calc_analyst_metrics_from_info(info)
 
-        # Combine everything
         data = {
             "ticker": ticker,
             "shortName": info.get("shortName", ticker),
             "sector": info.get("sector", "Unknown"),
             "industry": info.get("industry", "Unknown"),
             "marketCap": info.get("marketCap", 0),
-            "currentPrice": round(float(current_price), 2),
+            "currentPrice": round(current_price, 2),
             "currency": info.get("currency", "USD"),
             # Valuation
             "forwardPE": info.get("forwardPE"),
@@ -197,24 +251,20 @@ def fetch_ticker_data(ticker: str) -> dict | None:
             "profitMargins": info.get("profitMargins"),
             "returnOnEquity": info.get("returnOnEquity"),
             "returnOnAssets": info.get("returnOnAssets"),
-            # Momentum (calculated)
+            # Momentum
             **momentum,
-            # Analyst / EPS Revisions (calculated)
+            # Analyst / EPS Revisions
             **analyst_data,
             # Meta
             "lastUpdated": datetime.now().isoformat(),
         }
-
         return data
-
     except Exception:
         return None
 
 
-def _calc_momentum(hist: pd.DataFrame, current_price: float) -> dict:
-    """Calculate momentum metrics from price history."""
-    close = hist["Close"]
-    current_price = float(current_price)
+def _calc_momentum(close: pd.Series, current_price: float) -> dict:
+    """Calculate momentum metrics from a Close price series."""
 
     def _pct_return(days: int) -> float | None:
         if len(close) >= days + 1:
@@ -230,36 +280,22 @@ def _calc_momentum(hist: pd.DataFrame, current_price: float) -> dict:
         "momentum_1m": _pct_return(21),
         "momentum_3m": _pct_return(63),
         "momentum_6m": _pct_return(126),
-        "momentum_12m": _pct_return(252) if len(close) >= 253 else _pct_return(len(close) - 2),
+        "momentum_12m": _pct_return(252) if len(close) >= 253 else _pct_return(max(len(close) - 2, 1)),
         "momentum_vs_sma50": round((current_price - sma50) / sma50, 4) if sma50 and sma50 > 0 else None,
         "momentum_vs_sma200": round((current_price - sma200) / sma200, 4) if sma200 and sma200 > 0 else None,
     }
 
 
-def _calc_analyst_metrics(t: yf.Ticker, info: dict) -> dict:
-    """Calculate EPS revision proxy metrics."""
+def _calc_analyst_metrics_from_info(info: dict) -> dict:
+    """Calculate EPS revision proxy metrics from info dict."""
     target_price = info.get("targetMeanPrice")
     current = info.get("currentPrice") or info.get("previousClose")
     upside = None
     if target_price and current and current > 0:
         upside = round((target_price - current) / current, 4)
 
-    # Recommendation score: 1 = Strong Buy, 5 = Strong Sell
     rec_score = info.get("recommendationMean")
-
-    # Earnings surprise from most recent quarter
-    surprise_pct = None
-    try:
-        calendar = t.earnings_dates
-        if calendar is not None and not calendar.empty and "Surprise(%)" in calendar.columns:
-            recent = calendar.dropna(subset=["Surprise(%)"])
-            if not recent.empty:
-                surprise_pct = float(recent["Surprise(%)"].iloc[0])
-                if not np.isfinite(surprise_pct):
-                    surprise_pct = None
-    except Exception:
-        pass
-
+    surprise_pct = info.get("_earnings_surprise_pct")
     analyst_count = info.get("numberOfAnalystOpinions", 0)
 
     return {
@@ -270,7 +306,7 @@ def _calc_analyst_metrics(t: yf.Ticker, info: dict) -> dict:
     }
 
 
-# ── Batch Fetching with Progress ───────────────────────────────────
+# ── Batch Fetching with Concurrency ───────────────────────────────
 
 
 def fetch_universe_data(
@@ -279,8 +315,10 @@ def fetch_universe_data(
     progress_callback=None,
 ) -> dict[str, dict]:
     """
-    Fetch data for all tickers, filter by market cap, cache results.
-    Returns dict of {ticker: data_dict}.
+    Fetch data for all tickers using a two-phase approach:
+    1. Batch download all price history (single HTTP call via yfinance)
+    2. Concurrent threaded fetch of .info for each ticker (10 threads)
+    3. Combine and cache results
     """
     _ensure_cache_dir()
     cache_file = _cache_path(FUNDAMENTALS_CACHE_FILE)
@@ -298,15 +336,11 @@ def fetch_universe_data(
     if _is_cache_fresh(cache_file) and len(cached) > 100:
         return _filter_by_market_cap(cached, min_market_cap_b)
 
-    # Fetch fresh data
+    # Figure out which tickers still need fetching
+    tickers_to_fetch = []
     results = {}
-    total = len(tickers)
 
-    for i, ticker in enumerate(tickers):
-        if progress_callback:
-            progress_callback(i / total, f"Fetching {ticker} ({i + 1}/{total})")
-
-        # Use cached data if less than CACHE_EXPIRY_HOURS old
+    for ticker in tickers:
         if ticker in cached:
             last_updated = cached[ticker].get("lastUpdated", "")
             try:
@@ -316,14 +350,69 @@ def fetch_universe_data(
                     continue
             except Exception:
                 pass
+        tickers_to_fetch.append(ticker)
 
-        data = fetch_ticker_data(ticker)
-        if data:
-            results[ticker] = data
+    if not tickers_to_fetch:
+        return _filter_by_market_cap(results, min_market_cap_b)
 
-        # Brief pause to avoid rate limiting
-        if i % 10 == 0 and i > 0:
-            time.sleep(0.5)
+    total = len(tickers_to_fetch)
+
+    # ── Phase 1: Batch price download (fast, one HTTP call) ────────
+    if progress_callback:
+        progress_callback(0.0, f"Downloading price history for {total} tickers...")
+
+    # Download in chunks of 100 to avoid URL length limits
+    all_prices = {}
+    chunk_size = 100
+    for chunk_start in range(0, total, chunk_size):
+        chunk = tickers_to_fetch[chunk_start:chunk_start + chunk_size]
+        chunk_prices = _batch_download_prices(chunk)
+        all_prices.update(chunk_prices)
+        if progress_callback:
+            pct = min(0.3, (chunk_start + len(chunk)) / total * 0.3)
+            progress_callback(pct, f"Price data: {len(all_prices)} tickers downloaded...")
+
+    # ── Phase 2: Concurrent .info fetch (threaded) ─────────────────
+    if progress_callback:
+        progress_callback(0.3, f"Fetching fundamentals for {total} tickers (threaded)...")
+
+    info_results = {}
+    completed = 0
+    max_workers = 10  # 10 concurrent threads
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_ticker = {
+            executor.submit(_fetch_info_only, ticker): ticker
+            for ticker in tickers_to_fetch
+        }
+
+        for future in as_completed(future_to_ticker):
+            ticker = future_to_ticker[future]
+            completed += 1
+
+            try:
+                info = future.result()
+                if info:
+                    info_results[ticker] = info
+            except Exception:
+                pass
+
+            if progress_callback and completed % 10 == 0:
+                pct = 0.3 + (completed / total) * 0.65
+                progress_callback(
+                    min(pct, 0.95),
+                    f"Fundamentals: {completed}/{total} ({len(info_results)} valid)..."
+                )
+
+    # ── Phase 3: Combine price + info ──────────────────────────────
+    if progress_callback:
+        progress_callback(0.95, "Combining data and scoring...")
+
+    for ticker in tickers_to_fetch:
+        if ticker in info_results and ticker in all_prices:
+            data = _build_ticker_data(ticker, info_results[ticker], all_prices[ticker])
+            if data:
+                results[ticker] = data
 
     # Save to cache
     try:
@@ -333,7 +422,7 @@ def fetch_universe_data(
         pass
 
     if progress_callback:
-        progress_callback(1.0, "Done!")
+        progress_callback(1.0, f"Done! {len(results)} tickers loaded.")
 
     return _filter_by_market_cap(results, min_market_cap_b)
 
@@ -398,4 +487,13 @@ def remove_from_watchlist(ticker: str) -> list[dict]:
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_single_ticker(ticker: str) -> dict | None:
     """Fetch data for a single ticker (used for watchlist additions)."""
-    return fetch_ticker_data(ticker)
+    try:
+        info = _fetch_info_only(ticker)
+        if not info:
+            return None
+        prices = _batch_download_prices([ticker])
+        if ticker not in prices:
+            return None
+        return _build_ticker_data(ticker, info, prices[ticker])
+    except Exception:
+        return None
