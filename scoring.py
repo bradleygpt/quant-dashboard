@@ -91,7 +91,13 @@ def score_universe(
     overall_rating = composite.apply(_score_to_rating)
 
     # Build result DataFrame
-    result = df[["shortName", "sector", "industry", "marketCap", "currentPrice"]].copy()
+    # Carry forward ALL raw metric columns so detail view can display values
+    keep_cols = ["shortName", "sector", "industry", "marketCap", "currentPrice"]
+    for pillar_name, metrics in PILLAR_METRICS.items():
+        for yf_key, display_name, higher_is_better in metrics:
+            if yf_key in df.columns:
+                keep_cols.append(yf_key)
+    result = df[keep_cols].copy()
     result["marketCapB"] = (result["marketCap"] / 1e9).round(1)
 
     # Add pillar scores and grades
