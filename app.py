@@ -278,10 +278,13 @@ with st.sidebar:
         st.cache_data.clear()
         st.session_state.scored_df = None
         st.session_state.raw_data = None
-        # Also delete on-disk cache to force full re-fetch
-        import shutil
+        # Touch the cache file to mark it as stale so fetcher
+        # will try to update entries, but KEEPS existing data
+        import os
         try:
-            shutil.rmtree("data_cache", ignore_errors=True)
+            cache_file = os.path.join("data_cache", "fundamentals_cache.json")
+            if os.path.exists(cache_file):
+                os.utime(cache_file, (0, 0))
         except Exception:
             pass
         st.rerun()
