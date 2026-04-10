@@ -336,7 +336,9 @@ def fetch_universe_data(
     results = _load_cache()
 
     # If cache is fresh and large enough, just return it
-    if _is_cache_fresh(_cache_path(FUNDAMENTALS_CACHE_FILE)) and len(results) > 200:
+    target_size = len(tickers)
+    have_ratio = len(results) / target_size if target_size > 0 else 0
+    if _is_cache_fresh(_cache_path(FUNDAMENTALS_CACHE_FILE)) and have_ratio > 0.90:
         return _filter_by_market_cap(results, min_market_cap_b)
 
     # ── Step 2: Figure out which tickers need fetching ─────────────
