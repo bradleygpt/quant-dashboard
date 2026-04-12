@@ -110,6 +110,8 @@ def _filter_by_market_cap(data: dict, min_cap_b: float) -> dict:
     return {
         k: v for k, v in data.items()
         if v.get("marketCap", 0) >= min_cap
+        and v.get("type") != "etf"
+        and v.get("sector") != "ETF"
     }
 
 
